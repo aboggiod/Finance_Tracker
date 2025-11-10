@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Financial Command Center{% endblock %}
+
+{% block content %}
+
+<!-- V6.4: SETTINGS BUTTON - TOP RIGHT -->
+<button class="settings-button" onclick="openSettingsModal()" title="Settings">⚙️</button>
+
+<!-- V6.4: QUICK ACTIONS - IMPROVED LAYOUT -->
+<div class="quick-actions">
+    <button onclick="openRecurringIncomeModal()">💰 Recurring Income</button>
+    <button onclick="openCategoriesModal()">📁 Categories</button>
+    <button onclick="resetMonthlyBills()">🔄 Reset Monthly</button>
+    <button onclick="clearPaidBills()">🧹 Clear Paid</button>
+    <button onclick="exportFullDatabase()">📥 Export All</button>
+    <button onclick="importData()">📤 Import Data</button>
+    <button onclick="toggleDarkMode()" id="darkModeBtn">🌙 Dark Mode</button>
+</div>
+
+<script>
+// Initialize dark mode button text on load
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.body.classList.contains('dark-mode');
+    const btn = document.getElementById('darkModeBtn');
+    if (btn) btn.innerHTML = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+});
+</script>
+
+<!-- PAST DUE ALERTS -->
+{% if overdue %}
+<div class="alert alert-critical">
+    <h3>🔴 PAST DUE - URGENT</h3>
+    {% for bill in overdue %}
+    <div class="bill-item">
+        <div>
+            <strong>{{ bill.name }}</strong>
+            <span class="status-badge status-overdue">OVERDUE</span>
+        </div>
+        <div>
+            <strong>{{ bill.amount|currency }}</strong>
+            {% if bill.due_date %}
+            <small>(Due: {{ bill.due_date|date_format }})</small>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- PAST DUE INSTANCES -->
+{% if past_due_instances %}
+<div class="alert alert-critical">
+    <h3>🔴 PAST DUE INSTANCES</h3>
+    <div style="font-size: 14px; margin-bottom: 15px; opacity: 0.9;">
+        Multiple months past due - managed separately
+    </div>
+    {% for instance in past_due_instances %}
+    <div class="bill-item" style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+        <div>
+            <strong>{{ instance.item_name }}</strong> - {{ instance.period }}
+            <span class="status-badge status-overdue" style="margin-left: 10px;">{{ instance.item_type|upper }}</span>
+        </div>
+        <div>
+            <strong>{{ instance.amount|currency }}</strong>
+        </div>
+    </div>
+    {% endfor %}
+    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+        <strong>Total Past Due: {{ past_due_instances|sum(attribute='amount')|currency }}</strong>
+    </div>
+</div>
+{% endif %}
+
+<!-- WELLS FARGO BALANCE -->
+<div class="balance-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="balance-label">WELLS FARGO CHECKING</div>
+        <button onclick="updateBalance()" class="icon-button" title="Update Balance">
+            ✏️
+        </button>
+    </div>
+    {% if account %}
+    <div class="balance-amount">{{ account.available|currency }}</div>
+    <div style="margin-top: 20px; opacity: 0.8; font-size: 12px;">
+        Available Balance (Actual: {{ account.balance|currency }}, Cushion: {{ settings.cushion_amount|currency }})
+    </div>
+    <div style="margin-top: 10px; opacity: 0.8; font-size: 12px;">
+        Last updated: {{ account.last_updated }}
+    </div>
+    {% else %}
+    <div class="balance-amount">$0.00</div>
+    <div style="margin-top: 10px;">⚠️ Balance not set</div>
+    {% endif %}
+</div>
+
+<!-- V6.4: UPCOMING CHECKPOINTS - REDESIGNED -->
+<div class="card">
+    <h2>📅 Upcoming Checkpoints</h2>
+    <p style="font-size:14px;color:#666;margin-bottom:20px;">
+        Mode: {{ settings.checkpoint_mode|upper|replace('-', ' ') }} | Showing next {{ settings.checkpoint_count }}
+    </p>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;">
+        {% for checkpoint in checkpoints %}
+        <div style="background:{% if checkpoint.status == 'critical' %}#fee{% elif checkpoint.status == 'warning' %}#fff8e1{% else %}#e8f5e9{% endif %};
+                    border-left:4px solid {% if checkpoint.status == 'critical' %}#e74c3c{% elif checkpoint.status == 'warning' %}#f39c12{% else %}#27ae60{% endif %};
+                    padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            
+            <!-- Header -->
+            <div style="border-bottom:2px solid {% if checkpoint.status == 'critical' %}#e74c3c{% elif checkpoint.status == 'warning' %}#f39c12{% else %}#27ae60{% endif %};
+                        padding-bottom:12px;margin-bottom:15px;">
+                <h3 style="margin:0;font-size:18px;">{{ checkpoint.date|date_format }}</h3>
+                <p style="margin:5px 0 0 0;font-size:13px;color:#666;">
+                    {{ checkpoint.days_away }} days away • Covers through {{ checkpoint.period_end|date_format }}
+                </p>
+            </div>
+            
+            <!-- Money Summary -->
+            <div style="margin-bottom:15px;">
+                <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <span style="font-weight:500;">📋 Bills Due:</span>
+                    <strong style="color:#e74c3c;font-size:18px;">{{ checkpoint.total_bills|currency }}</strong>
+                </div>
+                
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(0,0,0,0.1);">
+                    <span style="font-weight:500;">💵 Drew's Income:</span>
+                    <strong style="color:#27ae60;font-size:18px;">{{ checkpoint.period_income|currency }}</strong>
+                </div>
+                
+                {% if checkpoint.period_paychecks %}
+                {% for pc in checkpoint.period_paychecks %}
+                <div style="font-size:12px;color:#666;margin-left:20px;padding:2px 0;">
+                    • {{ pc.date|date_format }}: {{ pc.amount|currency }}
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            
+            <!-- Bottom Line -->
+            <div style="background:{% if checkpoint.mom_needs > 0 %}rgba(231,76,60,0.1){% else %}rgba(39,174,96,0.1){% endif %};
+                        padding:12px;border-radius:6px;margin-top:15px;">
+                {% if checkpoint.mom_needs > 0 %}
+                <div style="font-weight:600;color:#e74c3c;font-size:16px;">
+                    🚨 Mom needs: {{ checkpoint.mom_needs|currency }}
+                </div>
+                <div style="font-size:12px;color:#666;margin-top:5px;">
+                    Due by {{ checkpoint.deadline|date_format }}
+                </div>
+                {% else %}
+                <div style="font-weight:600;color:#27ae60;font-size:16px;">
+                    ✅ Drew's income covers this period
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Bills List (Collapsible) -->
+            <details style="margin-top:15px;">
+                <summary style="cursor:pointer;font-weight:600;padding:8px;background:rgba(255,255,255,0.5);
+                                border-radius:4px;user-select:none;">
+                    View {{ checkpoint.bills|length }} bills →
+                </summary>
+                <div style="margin-top:10px;max-height:200px;overflow-y:auto;">
+                    {% for bill in checkpoint.bills %}
+                    <div style="display:flex;justify-content:space-between;padding:6px 8px;
+                                border-bottom:1px solid rgba(0,0,0,0.05);">
+                        <span style="font-size:13px;">{{ bill.name }}</span>
+                        <strong style="font-size:13px;">{{ bill.amount|currency }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="grid">
+    <!-- UPCOMING INCOME -->
+    <div class="card">
+        <h2>💵 Upcoming Income</h2>
+        {% if upcoming_income %}
+        {% for income in upcoming_income %}
+        <div class="bill-item">
+            <div>
+                <strong>{{ income.source }}</strong><br>
+                <small>{{ income.date_expected|date_format }}</small>
+            </div>
+            <div><strong>{{ income.amount|currency }}</strong></div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>No upcoming income scheduled</p>
+        {% endif %}
+        
+        <!-- Add Contribution Button -->
+        <button onclick="addIncome()" class="add-button" style="margin-top: 20px; width: 100%;">
+            + Record Mom's Contribution
+        </button>
+        
+        <!-- Recent Contributions -->
+        {% if recent_income %}
+        <div style="margin-top: 20px; padding: 15px; background: #d5f4e6; border-radius: 8px;">
+            <h3 style="font-size: 14px; margin-bottom: 10px;">Recent Contributions (Last 30 days)</h3>
+            {% for income in recent_income %}
+            <div class="bill-item" style="border-bottom-color: #27ae60;">
+                <div>
+                    <strong>{{ income.source }}</strong><br>
+                    <small>{{ income.date_received|date_format }}</small>
+                </div>
+                <div><strong style="color: #27ae60;">+{{ income.amount|currency }}</strong></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- CREDIT SNAPSHOT -->
+    <div class="card">
+        <h2>💳 Credit Snapshot</h2>
+        {% if utilization %}
+        <div class="metric-card">
+            <div class="big-number" style="color: {% if utilization.utilization_percent >= 70 %}#e74c3c{% elif utilization.utilization_percent >= 30 %}#f39c12{% else %}#27ae60{% endif %};">
+                {{ utilization.utilization_percent }}%
+            </div>
+            <div>Overall Utilization</div>
+            <div class="utilization-bar" style="margin: 20px 0;">
+                <div class="utilization-fill {% if utilization.utilization_percent >= 70 %}utilization-critical{% elif utilization.utilization_percent >= 30 %}utilization-warning{% else %}utilization-good{% endif %}" 
+                     style="width: {{ utilization.utilization_percent }}%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <div>
+                    <small>Balance</small>
+                    <div style="font-weight: bold;">{{ utilization.total_balance|currency }}</div>
+                </div>
+                <div>
+                    <small>Limit</small>
+                    <div style="font-weight: bold;">{{ utilization.total_limit|currency }}</div>
+                </div>
+            </div>
+        </div>
+        <a href="{{ url_for('credit_overview') }}" class="btn btn-primary" style="width: 100%; text-align: center; display: block; margin-top: 15px;">
+            View All Credit Accounts
+        </a>
+        {% else %}
+        <p>No credit data available</p>
+        {% endif %}
+    </div>
+    
+    <!-- MONTHLY OBLIGATIONS -->
+    <div class="card">
+        <h2>📊 Monthly Obligations</h2>
+        <div class="metric-card">
+            <div class="big-number">{{ total_monthly|currency }}</div>
+            <div>Total Monthly Expenses</div>
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Your income:</span>
+                    <strong>{{ settings.monthly_income|currency }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #ddd;">
+                    <span><strong>Mom covers:</strong></span>
+                    <strong style="color: #e74c3c;">{{ (total_monthly - settings.monthly_income)|currency }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAX STATUS -->
+<div class="card">
+    <h2>📋 Tax Obligations</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="padding: 20px; background: #fee; border-radius: 8px; border-left: 4px solid #e74c3c;">
+            <h3>2025 County/City Tax</h3>
+            <div style="font-size: 32px; font-weight: bold; margin: 10px 0;">$3,900.00</div>
+            <div style="margin-top: 10px;">
+                <div style="color: #666;">Base Amount: $3,900.00</div>
+                <div style="color: #e74c3c;">Interest (1%/mo): ${{ '{:.2f}'.format(tax_interest) }}</div>
+                <div style="font-weight: bold; margin-top: 5px;">
+                    Total Due: ${{ '{:.2f}'.format(tax_total) }}
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                <strong>Due Date: December 31, 2025</strong>
+            </div>
+        </div>
+        <div style="padding: 20px; background: #efe; border-radius: 8px; border-left: 4px solid #27ae60;">
+            <h3>2025 School Tax</h3>
+            <div style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #27ae60;">$3,900.00</div>
+            <div style="margin-top: 10px; color: #27ae60;">
+                <strong>✓ PAID IN FULL</strong>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                <span style="color: #666;">Paid on schedule</span>
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+        <strong>Annual Tax Planning</strong>
+        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div>
+                <div style="color: #666;">County/City (Annual)</div>
+                <strong>~$3,900</strong>
+            </div>
+            <div>
+                <div style="color: #666;">School (Annual)</div>
+                <strong>~$3,900</strong>
+            </div>
+            <div>
+                <div style="color: #666;">Total Annual</div>
+                <strong>~$7,800</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
