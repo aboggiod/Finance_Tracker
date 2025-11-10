@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Property Overview - Financial Command Center{% endblock %}
+
+{% block content %}
+
+<!-- PROPERTY SUMMARY -->
+<div class="card">
+    <h2>🏢 21 Central Property Overview</h2>
+    <div class="grid">
+        <div class="metric-card" style="background: #fee; border-radius: 8px;">
+            <div style="color: #e74c3c;">EXPENSES</div>
+            <div class="big-number" style="color: #e74c3c;">{{ expenses|currency }}</div>
+            <div style="font-size: 14px; margin-top: 5px;">Last 6 months</div>
+        </div>
+        <div class="metric-card" style="background: #d5f4e6; border-radius: 8px;">
+            <div style="color: #27ae60;">INCOME</div>
+            <div class="big-number" style="color: #27ae60;">{{ income|currency }}</div>
+            <div style="font-size: 14px; margin-top: 5px;">Last 6 months</div>
+        </div>
+        <div class="metric-card" style="background: #f8f9fa; border-radius: 8px;">
+            <div>NET</div>
+            <div class="big-number" style="color: {% if net < 0 %}#e74c3c{% else %}#27ae60{% endif %};">
+                {{ net|currency }}
+            </div>
+            <div style="font-size: 14px; margin-top: 5px;">Last 6 months</div>
+        </div>
+    </div>
+</div>
+
+<!-- MONTHLY OBLIGATIONS -->
+<div class="card">
+    <h2>💰 Monthly Property Obligations</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Expense</th>
+                <th>Amount</th>
+                <th>Frequency</th>
+                <th>Next Due</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Mortgage</strong></td>
+                <td>$867.90</td>
+                <td>Monthly</td>
+                <td>15th of each month</td>
+            </tr>
+            <tr>
+                <td><strong>Building Insurance</strong></td>
+                <td>$427.45</td>
+                <td>Bi-monthly</td>
+                <td>Dec 5, 2025</td>
+            </tr>
+            <tr>
+                <td><strong>School Tax</strong></td>
+                <td>~$2,200</td>
+                <td>Annual</td>
+                <td>TBD</td>
+            </tr>
+            <tr>
+                <td><strong>County/City Tax</strong></td>
+                <td>~$2,200</td>
+                <td>Annual</td>
+                <td>TBD</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- UNIT STATUS -->
+<div class="card">
+    <h2>🏠 Unit Status</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <div style="padding: 20px; background: #d5f4e6; border-radius: 8px; border-left: 4px solid #27ae60;">
+            <h3>Storefront</h3>
+            <div style="margin: 15px 0;">
+                <div class="status-badge status-paid">OCCUPIED</div>
+            </div>
+            <div><strong>Rent:</strong> $1,000/month</div>
+            <div><strong>Start Date:</strong> January 2026</div>
+        </div>
+        <div style="padding: 20px; background: #fee; border-radius: 8px; border-left: 4px solid #e74c3c;">
+            <h3>Residential Unit 1</h3>
+            <div style="margin: 15px 0;">
+                <div class="status-badge status-overdue">NEEDS WORK</div>
+            </div>
+            <div><strong>Status:</strong> Requires extensive renovation</div>
+            <div><strong>Estimate:</strong> TBD</div>
+        </div>
+        <div style="padding: 20px; background: #fee; border-radius: 8px; border-left: 4px solid #e74c3c;">
+            <h3>Residential Unit 2</h3>
+            <div style="margin: 15px 0;">
+                <div class="status-badge status-overdue">NEEDS WORK</div>
+            </div>
+            <div><strong>Status:</strong> Requires extensive renovation</div>
+            <div><strong>Estimate:</strong> TBD</div>
+        </div>
+    </div>
+</div>
+
+<!-- PROJECTED INCOME -->
+<div class="card">
+    <h2>📈 Income Projection</h2>
+    <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <h3>When Fully Rented:</h3>
+        <div style="margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
+                <span>Storefront</span>
+                <strong>$1,000/month</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
+                <span>Residential Unit 1 (est.)</span>
+                <strong>$1,200/month</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #333;">
+                <span>Residential Unit 2 (est.)</span>
+                <strong>$1,200/month</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 15px 0; font-size: 18px;">
+                <span><strong>Total Monthly Income</strong></span>
+                <strong style="color: #27ae60;">$3,400/month</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; background: #fff; margin-top: 10px; padding: 15px; border-radius: 4px;">
+                <span>Minus Mortgage</span>
+                <span>-$867.90</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; background: #fff; padding: 15px; border-radius: 4px;">
+                <span>Minus Insurance (monthly avg)</span>
+                <span>-$213.73</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 15px 0; font-size: 20px; margin-top: 10px; border-top: 2px solid #27ae60;">
+                <span><strong>Net Monthly Cash Flow</strong></span>
+                <strong style="color: #27ae60;">~$2,318/month</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TRANSACTION HISTORY -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Transaction History</h2>
+        <button onclick="createPropertyTransaction()" class="add-button">
+            + Add Transaction
+        </button>
+    </div>
+    {% if transactions %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trans in transactions %}
+            <tr>
+                <td>{{ trans.date|date_format }}</td>
+                <td>{{ trans.description }}</td>
+                <td>
+                    <span class="status-badge {% if trans.transaction_type == 'income' %}status-paid{% else %}status-overdue{% endif %}">
+                        {{ trans.transaction_type|upper }}
+                    </span>
+                </td>
+                <td>{{ trans.category or '-' }}</td>
+                <td style="font-weight: bold; color: {% if trans.transaction_type == 'income' %}#27ae60{% else %}#e74c3c{% endif %};">
+                    {% if trans.transaction_type == 'income' %}+{% else %}-{% endif %}{{ trans.amount|currency }}
+                </td>
+                <td>
+                    <button class="action-icon delete" onclick="confirmDelete('property', {{ trans.id }}, '{{ trans.description }}')" title="Delete">
+                        🗑️
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No transactions recorded yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
