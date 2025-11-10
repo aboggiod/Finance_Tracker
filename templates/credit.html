@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Overview - Financial Command Center{% endblock %}
+
+{% block content %}
+
+<!-- OVERALL UTILIZATION -->
+{% if utilization %}
+<div class="card">
+    <h2>💳 Overall Credit Utilization</h2>
+    <div style="display: flex; align-items: center; gap: 30px;">
+        <div style="flex: 1;">
+            <div class="big-number" style="color: {% if utilization.utilization_percent >= 70 %}#e74c3c{% elif utilization.utilization_percent >= 30 %}#f39c12{% else %}#27ae60{% endif %};">
+                {{ utilization.utilization_percent }}%
+            </div>
+            <div class="utilization-bar" style="height: 12px;">
+                <div class="utilization-fill {% if utilization.utilization_percent >= 70 %}utilization-critical{% elif utilization.utilization_percent >= 30 %}utilization-warning{% else %}utilization-good{% endif %}" 
+                     style="width: {{ utilization.utilization_percent }}%;"></div>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div><strong>Balance:</strong> {{ utilization.total_balance|currency }}</div>
+            <div><strong>Limit:</strong> {{ utilization.total_limit|currency }}</div>
+            <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                <strong>Goal:</strong> Get to <strong style="color: #27ae60;">&lt;30%</strong> = {{ (utilization.total_limit * 0.30)|currency }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- SEARCH BAR -->
+<div class="card">
+    <div class="search-container">
+        <input type="text" id="searchBar" placeholder="Search credit accounts..." autocomplete="off">
+    </div>
+</div>
+
+<!-- CREDIT CARDS -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>💳 Credit Cards ({{ cards|length }} accounts)</h2>
+        <button onclick="createCreditAccount()" class="add-button">
+            + Add Account
+        </button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Card Name</th>
+                <th>Balance</th>
+                <th>Limit</th>
+                <th>Utilization</th>
+                <th>Min Payment</th>
+                <th>APR</th>
+                <th>Cycle Close</th>
+                <th>Payment Due</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for card in cards %}
+            <tr class="searchable-row">
+                <td><strong>{{ card.emoji or '💳' }} {{ card.name }}</strong></td>
+                <td>{{ card.current_balance|currency }}</td>
+                <td>{{ card.credit_limit|currency }}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: bold; color: {% if card.utilization >= 100 %}#e74c3c{% elif card.utilization >= 70 %}#f39c12{% elif card.utilization >= 30 %}#f39c12{% else %}#27ae60{% endif %};">
+                            {{ card.utilization }}%
+                        </span>
+                        <div style="width: 60px; height: 6px; background: #ecf0f1; border-radius: 3px; overflow: hidden;">
+                            <div style="width: {{ [card.utilization, 100]|min }}%; height: 100%; background: {% if card.utilization >= 100 %}#e74c3c{% elif card.utilization >= 70 %}#f39c12{% elif card.utilization >= 30 %}#f39c12{% else %}#27ae60{% endif %};"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>{{ card.minimum_payment|currency }}</td>
+                <td>{{ card.apr }}%</td>
+                <td>Day {{ card.cycle_close_day }}</td>
+                <td>Day {{ card.payment_due_day }}</td>
+                <td>
+                    <button class="action-icon edit" onclick="editCreditCard({{ card.id }}, '{{ card.name }}', '{{ card.emoji or '💳' }}', {{ card.current_balance }}, {{ card.credit_limit }}, {{ card.minimum_payment }}, {{ card.apr }}, {{ card.cycle_close_day }}, {{ card.payment_due_day }})" title="Edit">
+                        ✏️
+                    </button>
+                    <button class="action-icon delete" onclick="confirmDelete('credit', {{ card.id }}, '{{ card.name }}')" title="Delete">
+                        🗑️
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f8f9fa; font-weight: bold;">
+                <td>TOTAL</td>
+                <td>{{ (cards|sum(attribute='current_balance'))|currency }}</td>
+                <td>{{ (cards|sum(attribute='credit_limit'))|currency }}</td>
+                <td></td>
+                <td>{{ (cards|sum(attribute='minimum_payment'))|currency }}</td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- LOANS -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Loans ({{ loans|length }} accounts)</h2>
+        <button onclick="createCreditAccount()" class="add-button">
+            + Add Loan
+        </button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Loan Name</th>
+                <th>Current Balance</th>
+                <th>Monthly Payment</th>
+                <th>APR</th>
+                <th>Payment Due Day</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in loans %}
+            <tr>
+                <td>
+                    <strong>{{ loan.emoji or '🏦' }} {{ loan.name }}</strong>
+                </td>
+                <td>{{ loan.current_balance|currency }}</td>
+                <td>{{ loan.minimum_payment|currency }}</td>
+                <td>{{ loan.apr }}%</td>
+                <td>Day {{ loan.payment_due_day }}</td>
+                <td>
+                    <button class="action-icon edit" onclick="editCreditCard({{ loan.id }}, '{{ loan.name }}', '{{ loan.emoji or '🏦' }}', {{ loan.current_balance }}, null, {{ loan.minimum_payment }}, {{ loan.apr }}, null, {{ loan.payment_due_day }})" title="Edit">
+                        ✏️
+                    </button>
+                    <button class="action-icon delete" onclick="confirmDelete('credit', {{ loan.id }}, '{{ loan.name }}')" title="Delete">
+                        🗑️
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f8f9fa; font-weight: bold;">
+                <td>TOTAL</td>
+                <td>{{ (loans|sum(attribute='current_balance'))|currency }}</td>
+                <td>{{ (loans|sum(attribute='minimum_payment'))|currency }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- PAYOFF STRATEGY -->
+<div class="card">
+    <h2>📈 Payoff Strategy to &lt;30% Utilization</h2>
+    {% if utilization %}
+    {% set target_balance = utilization.total_limit * 0.30 %}
+    {% set amount_to_pay = utilization.total_balance - target_balance %}
+    
+    <div style="padding: 20px; background: #d5f4e6; border-radius: 8px; border-left: 4px solid #27ae60;">
+        <h3>Goal: Pay down {{ amount_to_pay|currency }} total</h3>
+        <div style="margin-top: 15px;">
+            <strong>Priority: High utilization cards first (over 100%)</strong>
+        </div>
+        <div style="margin-top: 20px;">
+            <h4>Recommended Payoff Order:</h4>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                {% for card in cards if card.utilization >= 100 %}
+                <li style="margin: 8px 0;">
+                    <strong>{{ card.name }}</strong>: Pay down {{ (card.current_balance - (card.credit_limit * 0.70))|currency }} to get to 70%
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
